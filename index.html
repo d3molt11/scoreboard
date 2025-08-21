@@ -318,6 +318,7 @@
         <div class="controls">
             <button class="btn" onclick="loadLeaderboard()">🔄 Refresh Scores</button>
             <button class="btn" onclick="autoRefresh()">⚡ Auto Refresh</button>
+            <button class="btn" onclick="showDebugInfo()">🔍 Debug Info</button>
         </div>
 
         <div id="pride-stats" class="pride-stats" style="display: none;">
@@ -342,12 +343,102 @@
     </div>
 
     <script>
-        // Google Sheets configuration - using CSV method (no API key needed!)
+        // Google Sheets configuration
         const SHEET_ID = '18JJuwv00NEDFmzbLgpvdUStnndxNEb_eoZpf3QUHTdY';
         const SHEET_NAME = 'Scores';
         
-        // Fallback to Apps Script URL
+        // Apps Script URL for fallback
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJcwsFRUSlItKqMbDRlZb8DOH2JjGsZo-dnPjfMsrr3xOY91yTVjlIYpxxh0jRZfI3/exec';
+        
+        // Global variables
+        let leaderboardData = [];
+        let autoRefreshInterval = null;
+
+        // Show loading state
+        function showLoading() {
+            document.getElementById('loading-container').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading the pride's scores...</p>
+                </div>
+            `;
+        }
+
+        // Hide loading state
+        function hideLoading() {
+            document.getElementById('loading-container').innerHTML = '';
+        }
+
+        // Clear error messages
+        function clearError() {
+            document.getElementById('error-container').innerHTML = '';
+        }
+
+        // Show error message
+        function showError(message) {
+            document.getElementById('error-container').innerHTML = `
+                <div class="error">
+                    <h3>🦁 Roar! Something went wrong</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // Render the leaderboard
+        function renderLeaderboard(data) {
+            if (!data || data.length === 0) {
+                document.getElementById('leaderboard-container').innerHTML = `
+                    <div class="error">
+                        <h3>No Lions in the Pride Yet</h3>
+                        <p>Add some data to your Google Sheet to see the leaderboard here.</p>
+                    </div>
+                `;
+                document.getElementById('pride-stats').style.display = 'none';
+                return;
+            }
+
+            // Sort by points (descending)
+            data.sort((a, b) => b.points - a.points);
+            
+            // Update stats
+            updateStats(data);
+            
+            // Generate HTML for leaderboard
+            let leaderboardHTML = '<div class="leaderboard">';
+            
+            data.forEach((item, index) => {
+                const rank = index + 1;
+                const crown = rank === 1 ? '<span class="crown">👑</span>' : '';
+                
+                leaderboardHTML += `
+                    <div class="rank-item rank-${rank}">
+                        <div class="rank-number">${rank}</div>
+                        <div class="username">${item.username} ${crown}</div>
+                        <div class="points">${item.points.toLocaleString()}</div>
+                    </div>
+                `;
+            });
+            
+            leaderboardHTML += '</div>';
+            
+            // Update the DOM
+            document.getElementById('leaderboard-container').innerHTML = leaderboardHTML;
+            document.getElementById('pride-stats').style.display = 'grid';
+            
+            // Update last updated time
+            document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+        }
+
+        // Update statistics
+        function updateStats(data) {
+            const totalLions = data.length;
+            const totalPoints = data.reduce((sum, item) => sum + item.points, 0);
+            const avgPoints = totalLions > 0 ? (totalPoints / totalLions).toFixed(1) : 0;
+            
+            document.getElementById('total-lions').textContent = totalLions.toLocaleString();
+            document.getElementById('total-points').textContent = totalPoints.toLocaleString();
+            document.getElementById('avg-points').textContent = avgPoints;
+        }
 
         async function loadLeaderboard() {
             showLoading();
@@ -397,6 +488,44 @@
             }
         }
 
+        function showDebugInfo() {
+            const debugInfo = `
+                <div class="error">
+                    <h3>🔍 Debug Information & Setup Instructions</h3>
+                    
+                    <div style="background: rgba(255, 215, 0, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                        <h4>📋 Required Setup Steps:</h4>
+                        <ol style="text-align: left; margin: 1rem 0; padding-left: 1.5rem;">
+                            <li><strong>Open your Google Sheet</strong></li>
+                            <li>Go to <strong>File → Share → Publish to web</strong> (NOT just "Share"!)</li>
+                            <li>Select "Entire document" or your specific sheet</li>
+                            <li>Choose "Comma-separated values (.csv)" as format</li>
+                            <li>Click "Publish" and confirm</li>
+                            <li>Copy the published URL and replace the sheet ID in the website</li>
+                        </ol>
+                    </div>
+                    
+                    <p><strong>Current Sheet ID:</strong> ${SHEET_ID}</p>
+                    <p><strong>Current Data:</strong> ${leaderboardData.length} items loaded</p>
+                    
+                    <div style="margin: 1rem 0;">
+                        <strong>CSV URLs being tried:</strong>
+                        <ul style="text-align: left; margin: 0.5rem 0; font-size: 0.9rem;">
+                            <li><a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0" target="_blank">Method 1: Direct Export</a></li>
+                            <li><a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv" target="_blank">Method 2: Query Export</a></li>
+                        </ul>
+                        <p style="font-size: 0.9rem; font-style: italic;">Click these links - if they don't show CSV data, your sheet isn't published properly!</p>
+                    </div>
+                    
+                    <div style="background: rgba(220, 20, 60, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                        <strong>⚠️ Common Issue:</strong> "Share with link" ≠ "Publish to web"<br>
+                        You need to use "Publish to web" for CSV access to work!
+                    </div>
+                </div>
+            `;
+            document.getElementById('error-container').innerHTML = debugInfo;
+        }
+
         // CSV export method (works with public sheets)
         async function fetchFromCSV() {
             // Try multiple CSV export formats
@@ -409,23 +538,33 @@
             for (let i = 0; i < csvUrls.length; i++) {
                 try {
                     console.log(`Trying CSV URL ${i + 1}:`, csvUrls[i]);
-                    const response = await fetch(csvUrls[i]);
+                    const response = await fetch(csvUrls[i], {
+                        method: 'GET',
+                        mode: 'cors',
+                        headers: {
+                            'Accept': 'text/csv,text/plain,*/*'
+                        }
+                    });
+                    
+                    console.log(`Response status: ${response.status}`);
                     
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
                     
                     const csvText = await response.text();
-                    console.log('CSV Response:', csvText.substring(0, 200) + '...');
+                    console.log('CSV Response length:', csvText.length);
+                    console.log('CSV Response preview:', csvText.substring(0, 300));
                     
                     if (csvText && csvText.length > 10) {
                         const parsed = parseCSV(csvText);
+                        console.log('Parsed CSV:', parsed);
                         if (parsed && parsed.length > 0) {
                             return parsed;
                         }
                     }
                 } catch (error) {
-                    console.log(`CSV URL ${i + 1} failed:`, error.message);
+                    console.error(`CSV URL ${i + 1} failed:`, error);
                 }
             }
             
