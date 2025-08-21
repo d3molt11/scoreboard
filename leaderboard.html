@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏆 Word of the Week Leaderboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    table {
+      border-collapse: collapse;
+      width: 80%;
+      max-width: 600px;
+      margin-top: 20px;
+      background: white;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px;
+      text-align: center;
+    }
+    th {
+      background: #4CAF50;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .gold { color: gold; font-weight: bold; }
+    .silver { color: silver; font-weight: bold; }
+    .bronze { color: #cd7f32; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>🏆 Word of the Week Leaderboard</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Username</th>
+        <th>Points</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboard"></tbody>
+  </table>
+
+  <script>
+    async function loadLeaderboard() {
+      const res = await fetch("https://script.google.com/macros/s/AKfycbynDaPqDwmj4TBxaM2lmFysEzQiaP0a0LwnK-N0YvNiZMfpoLwNfgWRYAoRoY0PjejL/exec"); // Replace with your Apps Script URL
+      const data = await res.json();
+
+      // Sort by points (descending)
+      data.sort((a,b) => b.points - a.points);
+
+      const tbody = document.getElementById("leaderboard");
+      tbody.innerHTML = "";
+
+      data.forEach((u, i) => {
+        let rankEmoji = "";
+        if (i === 0) rankEmoji = "🥇";
+        else if (i === 1) rankEmoji = "🥈";
+        else if (i === 2) rankEmoji = "🥉";
+
+        tbody.innerHTML += `
+          <tr>
+            <td class="${i===0?'gold':i===1?'silver':i===2?'bronze':''}">
+              ${rankEmoji || (i+1)}
+            </td>
+            <td>${u.username}</td>
+            <td>${u.points}</td>
+          </tr>`;
+      });
+    }
+
+    loadLeaderboard();
+  </script>
+</body>
+</html>
